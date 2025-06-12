@@ -6,7 +6,7 @@ from save_to_excel import save_to_excel
 def find_product(page):
     url = 'https://rozetka.com.ua/'
     page.goto(url)
-
+    page.wait_for_selector('input[name="search"]')
     page.type('input[name="search"]', "Apple iPhone 15 128GB Black", delay=100)
     page.locator('button:has-text("Знайти")').click()
     page.wait_for_selector("//div[@class='goods-tile__content']")
@@ -23,40 +23,39 @@ def find_product(page):
 
             title.click()
 
-            page.wait_for_selector('//html/body/rz-app-root/div/div[1]/rz-product/div/rz-product-tab-main/div/div[1]/div[2]/div/rz-product-main-info/div/div[1]/rz-title-block/div/div[2]/a/text()', timeout=15000)
+            page.wait_for_selector('//div[contains(@class, "text-base product-comment-rating__text")]', timeout=15000)
 
-            get_info(page)
-
-            break
+            products = get_info(page)
+            return products
 
 
 def get_info(page):
     products = {}
 
     try:
-        products['product'] = page.query_selector('//h1').text_content()
+        products['product'] = page.locator('//h1').text_content().strip()
     except (AttributeError, TypeError, TimeoutError):
         products['product'] = None
 
     try:
-        products['color'] = page.query_selector('//rz-var-parameter-option[1]/div/p/span[2]').text_content()
+        products['color'] = page.query_selector('//rz-var-parameter-option[1]/div/p/span[2]').text_content().strip()
     except (AttributeError, TimeoutError, TypeError):
         products['color'] = None
 
     try:
         products['memory_capacity'] = page.query_selector('//rz-var-parameter-option[2]/div/p/span[2]'
-                                                          ).text_content()
+                                                          ).text_content().strip()
     except (AttributeError, TimeoutError, TypeError):
         products['memory_capacity'] = None
 
     try:
-        products['seller'] = page.query_selector('//span[@class="text-inline d-block"]').text_content()
+        products['seller'] = page.query_selector('//span[@class="text-inline d-block"]').text_content().strip()
     except (AttributeError, TimeoutError, TypeError,):
         products['seller'] = None
 
     try:
         products['regular_price'] = (page.query_selector('//p[@class="product-price__small"]')
-                                     .text_content().replace('\xa0', '').strip())
+                                     .text_content().replace('\xa0', '').replace('₴', '').strip())
     except (AttributeError, TimeoutError, TypeError):
         products['regular_price'] = None
 
@@ -84,7 +83,7 @@ def get_info(page):
             '//a[contains(@href, "/comments") and contains(text(), "відгуки")]')
         for a in elements:
             if 'відгуки' in a.text_content():
-                products['number_of_reviews'] = re.findall(r'\d+', a.text_content())[0]
+                products['number_of_reviews'] = re.findall(r'\d+', a.text_content())[0].strip()
                 break
     except (AttributeError, TimeoutError, TypeError, IndexError):
         products['number_of_reviews'] = None
@@ -111,7 +110,7 @@ def get_info(page):
     except (AttributeError, TimeoutError, TypeError):
         products['images'] = None
 
-    print(products)
+
     return products
 
 
@@ -119,10 +118,10 @@ def main():
     with (sync_playwright() as p):
         browser = p.chromium.launch(headless=False)
         page = browser.new_page()
-        find_product(page)
-
+        products_list = find_product(page)
+        print(products_list)
+        save_to_excel(products_list, output_path='playwright_pars.xlsx')
         browser.close()
 
 main()
-#print(products_list)
-#save_to_excel(products_list, output_path='playwright_pars.xlsx')
+
