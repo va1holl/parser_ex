@@ -62,7 +62,7 @@ def get_info(page):
     try:
         products['discounted_price'] = (page.query_selector(
             '//p[@class="product-price__big text-2xl bold leading-none product-price__big-color-red"]')
-                                        .text_content().replace('\xa0', '').strip())
+                                        .text_content().replace('\xa0', '').replace('₴', '').strip())
     except (AttributeError, TimeoutError, TypeError):
         products['discounted_price'] = None
 
